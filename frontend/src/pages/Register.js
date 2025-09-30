@@ -1,150 +1,152 @@
 import React, { useState } from 'react';
-import './Login.css';
+import { useNavigate } from 'react-router-dom';
 
-const Register = ({ onRegister, onSwitchToLogin }) => {
+const Register = () => {
   const [formData, setFormData] = useState({
-    email: '',
     username: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    if (formData.password !== formData.confirmPassword) {
+      alert('Пароли не совпадают');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      if (response.ok) {
+        alert('Регистрация успешна! Теперь войдите.');
+        navigate('/login');
+      } else {
+        const error = await response.json();
+        alert('Ошибка: ' + error.detail);
+      }
+    } catch (error) {
+      alert('Ошибка соединения');
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Пароли не совпадают');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('http://localhost:8000/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username,
-          password: formData.password
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        onRegister(data);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Ошибка регистрации');
-      }
-    } catch (error) {
-      setError('Ошибка соединения с сервером');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
+    <div style={styles.container}>
+      <div style={styles.card}>
         <h2>Регистрация в CodeDoc AI</h2>
-        <p className="login-subtitle">Создайте новый аккаунт</p>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username">Имя пользователя</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              placeholder="Ваше имя"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="your@email.com"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Пароль</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Минимум 6 символов"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Подтвердите пароль</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Повторите пароль"
-              disabled={loading}
-            />
-          </div>
-
-          {error && <div className="error-message">{error}</div>}
-
-          <button
-            type="submit"
-            className="login-button"
-            disabled={loading}
-          >
-            {loading ? 'Регистрация...' : 'Зарегистрироваться'}
-          </button>
+        <form onSubmit={handleRegister}>
+          <input
+            name="username"
+            placeholder="Имя пользователя"
+            value={formData.username}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+          <input
+            name="password"
+            type="password"
+            placeholder="Пароль"
+            value={formData.password}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+          <input
+            name="confirmPassword"
+            type="password"
+            placeholder="Подтвердите пароль"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+          <button type="submit" style={styles.button}>Зарегистрироваться</button>
         </form>
-
-        <div className="switch-auth">
-          <span>Уже есть аккаунт? </span>
-          <button onClick={onSwitchToLogin} className="switch-button">
-            Войти
-          </button>
-        </div>
+        <button
+          onClick={() => navigate('/login')}
+          style={styles.secondaryButton}
+        >
+          Назад к входу
+        </button>
       </div>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: '20px'
+  },
+  card: {
+    background: 'white',
+    padding: '40px',
+    borderRadius: '10px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+    width: '100%',
+    maxWidth: '400px'
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    margin: '10px 0',
+    border: '1px solid #ddd',
+    borderRadius: '5px',
+    fontSize: '16px'
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    background: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    margin: '10px 0'
+  },
+  secondaryButton: {
+    width: '100%',
+    padding: '12px',
+    background: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    fontSize: '16px',
+    cursor: 'pointer'
+  }
 };
 
 export default Register;
