@@ -11,8 +11,9 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0",
     "react-scripts": "5.0.1",
-    "react-router-dom": "^6.8.0"
+    "typescript": "^4.9.5"
   },
   "browserslist": {
     "production": [
@@ -27,5 +28,10 @@
     ]
   },
   "author": "CodeDoc AI Team",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  }
 }
