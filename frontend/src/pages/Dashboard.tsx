@@ -56,14 +56,6 @@ const Dashboard: React.FC = () => {
       borderRadius: '4px',
       cursor: 'pointer'
     },
-    adminButton: {
-      padding: '8px 16px',
-      background: '#28a745',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer'
-    },
     content: {
       padding: '40px 20px',
       maxWidth: '1200px',
@@ -182,7 +174,8 @@ const Dashboard: React.FC = () => {
     resultsList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '15px'
+      gap: '15px',
+      color: 'black',
     },
     resultCard: {
       border: '1px solid #e9ecef',
@@ -213,6 +206,7 @@ const Dashboard: React.FC = () => {
       margin: 0,
       padding: '20px',
       background: 'white',
+      color: 'black',
       fontSize: '14px',
       lineHeight: '1.5',
       whiteSpace: 'pre-wrap',
@@ -253,7 +247,7 @@ const Dashboard: React.FC = () => {
 
   const fetchUserData = async (token: string): Promise<void> => {
     try {
-      const response = await fetch('http://localhost:8000/auth/me', {
+      const response = await fetch('http://localhost:8000/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -284,7 +278,7 @@ const Dashboard: React.FC = () => {
         file_types: fileTypes
       };
 
-      const response = await fetch('http://localhost:8000/analyze-repo', {
+      const response = await fetch('http://localhost:8000/api/analyze-repo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

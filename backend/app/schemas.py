@@ -55,8 +55,8 @@ class FileAnalysisResponse(BaseModel):
 
 class RepositoryAnalysisRequest(BaseModel):
     local_path: str
-    include_patterns: Optional[List[str]] = None
-    exclude_patterns: Optional[List[str]] = None
+    include_patterns: List[str] = ["*.py", "*.js", "*.ts", "*.java", "*.cpp", "*.c", "*.go", "*.rs"]
+    exclude_patterns: List[str] = [".git/*", "node_modules/*", "__pycache__/*", "*.min.js", "dist/*", "build/*"]
 
 
 class RepositoryAnalysisResponse(BaseModel):
@@ -68,3 +68,30 @@ class RepositoryAnalysisResponse(BaseModel):
     file_analyses: List[FileAnalysisResponse]
     summary: Dict[str, Any]
     processing_time: float
+
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    version: str
+    timestamp: str
+    uptime: float
+
+
+class UserStats(BaseModel):
+    user_id: int
+    analyses_count: int
+    projects_count: int
+    last_activity: str
+
+
+class DocumentationResponse(BaseModel):
+    file_path: str
+    documentation: str
+    status: str
+
+
+class AnalysisResult(BaseModel):
+    total_files: int
+    processed_files: int
+    results: List[DocumentationResponse]
