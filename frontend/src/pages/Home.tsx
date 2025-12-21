@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CSSProperties } from '../types';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -199,7 +198,7 @@ const Home: React.FC = () => {
     features: {
       background: 'white',
       padding: '100px 20px',
-      color: 'white'
+      color: '#333'
     },
     featuresContainer: {
       maxWidth: '1200px',
@@ -402,7 +401,7 @@ function calculateTotal(products) {
         <div style={styles.featuresContainer}>
           <h2 style={styles.featuresTitle}>Почему CodeDoc AI?</h2>
           <div style={styles.featuresGrid}>
-            {features.map((feature: Feature, index: number) => (
+            {features.map((feature, index) => (
               <div
                 key={index}
                 style={styles.featureCard}
