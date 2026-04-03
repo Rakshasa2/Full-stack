@@ -3,13 +3,13 @@
 }
 
 button {
-  transition: all 0.3s ease;
+  transition: all 0.28s ease;
   cursor: pointer;
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-soft);
 }
 
 button:disabled {
@@ -25,8 +25,8 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #007bff !important;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--color-brand-600) !important;
+  box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.12);
 }
 
 .text-center {

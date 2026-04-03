@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 try:
     from .lm_studio_client import lm_studio_client
 
-    logger.info("✅ Клиент LM Studio успешно импортирован")
+    logger.info("Клиент LM Studio успешно импортирован")
 except ImportError as e:
-    logger.error(f"❌ Не удалось импортировать lm_studio_client: {e}")
+    logger.error(f"Не удалось импортировать lm_studio_client: {e}")
 
 
     class MockLMStudioClient:
@@ -36,20 +36,20 @@ class MLGenerator:
     def __init__(self, use_lm_studio: bool = True):
         self.use_lm_studio = use_lm_studio
         self.cache = {}
-        logger.info(f"✅ MLGenerator инициализирован (use_lm_studio={use_lm_studio})")
+        logger.info(f"MLGenerator инициализирован (use_lm_studio={use_lm_studio})")
 
     def generate_documentation(self, code: str, context: Dict[str, Any]) -> Dict[str, Any]:
         start_time = time.time()
         file_path = context.get("file_path", "unknown.py")
         language = context.get("language", "python")
 
-        logger.info(f"📄 Генерация документации для {file_path} ({len(code)} chars)")
+        logger.info(f"Генерация документации для {file_path} ({len(code)} chars)")
 
         try:
             structure = self._analyze_structure(code, language)
 
             if self._should_use_fallback(code, structure):
-                logger.info(f"🔄 Используем быстрый fallback для {file_path}")
+                logger.info(f"Используем быстрый fallback для {file_path}")
                 return self._generate_fast_docs(code, file_path, structure, start_time)
 
             ai_result = None
@@ -67,7 +67,7 @@ class MLGenerator:
 
             generation_time = time.time() - start_time
 
-            logger.info(f"✅ Документация для {file_path} сгенерирована за {generation_time:.2f} сек")
+            logger.info(f"Документация для {file_path} сгенерирована за {generation_time:.2f} сек")
 
             return {
                 "documentation": formatted_docs,
@@ -87,7 +87,7 @@ class MLGenerator:
             }
 
         except Exception as e:
-            logger.error(f"❌ Критическая ошибка генерации документации: {e}")
+            logger.error(f"Критическая ошибка генерации документации: {e}")
             return self._generate_fallback_docs(code, file_path, start_time, str(e))
 
     def _get_ai_documentation_with_timeout(self, code: str, file_path: str, language: str) -> Optional[Dict[str, Any]]:
@@ -99,7 +99,7 @@ class MLGenerator:
                 )
                 return future.result(timeout=TIMEOUT_SECONDS)
             except TimeoutError:
-                logger.warning(f"⏰ Таймаут запроса к LM Studio для {file_path}")
+                logger.warning(f"Таймаут запроса к LM Studio для {file_path}")
                 return None
             except Exception as e:
                 logger.error(f"Ошибка при запросе к LM Studio: {e}")
@@ -114,7 +114,7 @@ class MLGenerator:
                     code_for_request = '\n'.join(lines[:15] + ['... [код сокращен] ...'] + lines[-5:])
                 else:
                     code_for_request = code[:max_code_length]
-                logger.info(f"📉 Код сокращен для {file_path}: {len(code)} → {len(code_for_request)} chars")
+                logger.info(f"Код сокращен для {file_path}: {len(code)} → {len(code_for_request)} chars")
             else:
                 code_for_request = code
 
@@ -154,9 +154,9 @@ class MLGenerator:
 *Сгенерировано автоматически*
 
 **Основная информация:**
-- 📏 Строк кода: {structure.get('total_lines', 0)}
-- 🏗️ Функций: {structure.get('function_count', 0)}
-- 🏛️ Классов: {structure.get('class_count', 0)}
+- Строк кода: {structure.get('total_lines', 0)}
+- Функций: {structure.get('function_count', 0)}
+- Классов: {structure.get('class_count', 0)}
 
 **Краткое описание:**
 {self._generate_brief_description(code, file_path)}
@@ -192,24 +192,24 @@ class MLGenerator:
                 func_info += f" - {func['type']}"
             functions_info.append(func_info)
 
-        docs = f"""# 📄 {file_path}
+        docs = f"""# {file_path}
 *Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 
 ---
 
-## 📋 Основная информация
+##Основная информация
 **Размер:** {structure.get('total_lines', 0)} строк
 **Сложность:** {self._estimate_complexity(code)}
 **Тип файла:** {self._detect_file_type(file_path, code)}
 
 ---
 
-## 📦 Импорты
+##Импорты
 {chr(10).join([f"- `{imp}`" for imp in imports[:10]]) if imports else "Нет импортов"}
 
 ---
 
-## 🏗️ Структура
+##Структура
 **Функции ({structure.get('function_count', 0)}):**
 {chr(10).join([f"- {info}" for info in functions_info]) if functions_info else "Нет функций"}
 
@@ -218,12 +218,12 @@ class MLGenerator:
 
 ---
 
-## 💡 Рекомендации
+##Рекомендации
 {self._generate_recommendations(code, structure)}
 
 ---
 
-⚠️ *AI анализ временно недоступен. Использован быстрый режим.*"""
+*AI анализ временно недоступен. Использован быстрый режим.*"""
 
         return docs
 
@@ -345,12 +345,12 @@ class MLGenerator:
 
 ---
 
-## 🤖 AI Анализ
+## AI Анализ
 {ai_content if ai_content else "AI не предоставил детальный анализ."}
 
 ---
 
-## 🏗️ Структура файла
+## Структура файла
 **Всего функций:** {structure.get('function_count', 0)}
 {chr(10).join([f"- `{f['name']}()` - {f.get('type', 'Операция')} (строка {f['line']})" for f in structure.get('functions', [])][:10])}
 
@@ -358,8 +358,7 @@ class MLGenerator:
 {chr(10).join([f"- `{c['name']}` (строка {c['line']})" for c in structure.get('classes', [])][:5]) if structure.get('classes') else "Нет классов"}
 
 ---
-
-✅ *Документация сгенерирована с использованием AI*"""
+ *Документация сгенерирована с использованием AI*"""
 
         return docs
 
@@ -392,7 +391,7 @@ class MLGenerator:
         str, Any]:
         try:
             structure = self._analyze_structure(code, "python")
-            docs = f"""# ⚠️ {file_path}
+            docs = f"""# {file_path}
 *Упрощенный режим из-за ошибки*
 
 **Ошибка:** {error_msg[:200]}

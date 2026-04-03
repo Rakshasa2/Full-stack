@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { RegisterFormData, CSSProperties } from '../types';
+import SeoHead from '../components/SeoHead';
+import { getApiErrorMessage } from '../utils/apiErrors';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -11,6 +13,7 @@ const Register: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string>('');
   const navigate = useNavigate();
 
@@ -20,6 +23,7 @@ const Register: React.FC = () => {
       [e.target.name]: e.target.value
     });
     setError('');
+    setSuccessMessage('');
   };
 
   const handleFocus = (fieldName: string): void => {
@@ -30,16 +34,14 @@ const Register: React.FC = () => {
     setFocusedField('');
   };
 
-  const extractErrorMessage = (errorData: any): string => {
-    if (typeof errorData === 'string') return errorData;
-    if (errorData.detail) return errorData.detail;
-    if (errorData.msg) return errorData.msg;
-    if (Array.isArray(errorData)) return errorData.map(e => e.msg || JSON.stringify(e)).join(', ');
-    return 'Произошла ошибка при регистрации';
-  };
-
   const handleRegister = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
+
+    if (!formData.username.trim() || !formData.email.trim() ||
+        !formData.password || !formData.confirmPassword) {
+      setError('Все поля обязательны для заполнения');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Пароли не совпадают');
@@ -51,18 +53,30 @@ const Register: React.FC = () => {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Введите корректный email адрес');
+      return;
+    }
+
+    if (formData.username.includes(' ')) {
+      setError('Имя пользователя не должно содержать пробелы');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
+          username: formData.username.trim(),
+          email: formData.email.trim(),
           password: formData.password
         }),
       });
@@ -70,13 +84,16 @@ const Register: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Регистрация успешна! Теперь войдите.');
-        navigate('/login');
+        setSuccessMessage('Регистрация успешна! Перенаправляем на страницу входа...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       } else {
-        setError(extractErrorMessage(data));
+        setError(getApiErrorMessage({ response: { data } }, 'Неизвестная ошибка сервера'));
       }
-    } catch (error) {
-      setError('Ошибка соединения с сервером');
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, 'Проверьте, что backend и прокси доступны.');
+      setError(`Ошибка соединения с сервером: ${message}.`);
     } finally {
       setLoading(false);
     }
@@ -88,35 +105,46 @@ const Register: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'var(--gradient-brand-soft)',
       padding: '20px'
     },
     card: {
-      background: 'white',
+      background: 'rgba(255,255,255,0.96)',
       padding: '40px',
-      borderRadius: '10px',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+      borderRadius: 'var(--radius-card)',
+      boxShadow: 'var(--shadow-deep)',
+      border: '1px solid rgba(255,255,255,0.28)',
       width: '100%',
-      maxWidth: '400px'
+      maxWidth: '440px',
+      backdropFilter: 'blur(14px)'
     },
     header: {
       textAlign: 'center',
       marginBottom: '30px'
     },
+    eyebrow: {
+      marginBottom: '12px',
+      color: 'var(--color-brand-600)',
+      fontSize: '12px',
+      textTransform: 'uppercase',
+      letterSpacing: '0.12em',
+      fontWeight: 800
+    },
     title: {
-      fontSize: '24px',
+      fontSize: '30px',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: 'var(--color-brand-900)',
       marginBottom: '8px'
     },
     subtitle: {
-      color: '#7f8c8d',
-      fontSize: '14px'
+      color: 'var(--color-text-muted)',
+      fontSize: '14px',
+      lineHeight: 1.6
     },
     form: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '20px'
+      gap: '18px'
     },
     inputGroup: {
       display: 'flex',
@@ -124,66 +152,97 @@ const Register: React.FC = () => {
       gap: '8px'
     },
     label: {
-      fontSize: '14px',
-      fontWeight: '600',
-      color: '#2c3e50'
+      fontSize: '13px',
+      fontWeight: 600,
+      color: 'var(--color-brand-800)',
+      letterSpacing: '0.02em'
     },
     input: {
       width: '100%',
-      padding: '12px',
-      border: '2px solid #ecf0f1',
-      borderRadius: '8px',
+      padding: '14px 16px',
+      border: '1px solid var(--color-border)',
+      borderRadius: '14px',
       fontSize: '16px',
-      transition: 'border-color 0.3s'
+      transition: 'border-color 0.3s, box-shadow 0.3s',
+      boxSizing: 'border-box'
     },
     inputFocused: {
-      borderColor: '#3498db'
+      borderColor: 'var(--color-brand-600)',
+      boxShadow: '0 0 0 3px rgba(31, 78, 121, 0.12)'
+    },
+    inputError: {
+      borderColor: 'var(--color-danger)'
     },
     errorMessage: {
-      background: '#fee',
-      color: '#c33',
-      padding: '10px',
-      borderRadius: '5px',
+      background: 'rgba(200, 92, 68, 0.08)',
+      color: 'var(--color-danger)',
+      padding: '12px',
+      borderRadius: '12px',
       fontSize: '14px',
-      border: '1px solid #fcc'
+      border: '1px solid rgba(200, 92, 68, 0.16)',
+      margin: '0'
+    },
+    successMessage: {
+      background: 'rgba(47, 143, 104, 0.12)',
+      color: '#1c674a',
+      padding: '12px',
+      borderRadius: '12px',
+      fontSize: '14px',
+      border: '1px solid rgba(47, 143, 104, 0.18)',
+      margin: '0'
     },
     submitButton: {
-      padding: '12px',
-      background: '#27ae60',
+      padding: '14px',
+      background: 'var(--gradient-brand-soft)',
       color: 'white',
       border: 'none',
-      borderRadius: '8px',
+      borderRadius: '14px',
       fontSize: '16px',
       cursor: 'pointer',
-      fontWeight: '600',
-      transition: 'all 0.3s'
+      fontWeight: 600,
+      transition: 'transform 0.3s, box-shadow 0.3s',
+      marginTop: '10px'
     },
     submitButtonLoading: {
       opacity: 0.7,
-      cursor: 'not-allowed'
+      cursor: 'not-allowed',
+      background: '#95a5a6'
     },
     footer: {
       textAlign: 'center',
-      marginTop: '20px',
+      marginTop: '25px',
       paddingTop: '20px',
-      borderTop: '1px solid #ecf0f1',
-      color: '#7f8c8d',
+      borderTop: '1px solid var(--color-border)',
+      color: 'var(--color-text-muted)',
       fontSize: '14px'
     },
     loginLink: {
-      color: '#3498db',
+      color: 'var(--color-brand-600)',
       textDecoration: 'none',
-      fontWeight: '600',
+      fontWeight: 600,
       marginLeft: '5px'
     }
   };
 
+  const hasFieldError = error.toLowerCase().includes('поле') ||
+                       error.toLowerCase().includes('username') ||
+                       error.toLowerCase().includes('email') ||
+                       error.toLowerCase().includes('password');
+
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <div style={styles.container} className="auth-shell">
+      <SeoHead
+        title="Регистрация | CodeDoc AI"
+        description="Страница регистрации в CodeDoc AI. Форма создания аккаунта закрыта от поисковой индексации."
+        canonicalPath="/register"
+        noindex
+        imageAlt="Страница регистрации CodeDoc AI"
+      />
+      <div style={styles.card} className="auth-card-shell">
         <div style={styles.header}>
+          <p style={styles.eyebrow}>Workspace Access</p>
           <h2 style={styles.title}>Регистрация в CodeDoc AI</h2>
-          <p style={styles.subtitle}>Создайте новый аккаунт</p>
+          <p style={styles.subtitle}>Создайте аккаунт и перейдите в единое рабочее пространство для анализа кода.</p>
         </div>
 
         <form onSubmit={handleRegister} style={styles.form}>
@@ -196,13 +255,15 @@ const Register: React.FC = () => {
               onChange={handleChange}
               onFocus={() => handleFocus('username')}
               onBlur={handleBlur}
-              placeholder="Ваше имя"
+              placeholder="Ваше имя (без пробелов)"
               style={{
                 ...styles.input,
-                ...(focusedField === 'username' && styles.inputFocused)
-              }}
+                ...(focusedField === 'username' ? styles.inputFocused : {}),
+                ...(hasFieldError && error.toLowerCase().includes('username') ? styles.inputError : {})
+              } as React.CSSProperties}
               required
               disabled={loading}
+              autoComplete="username"
             />
           </div>
 
@@ -218,10 +279,12 @@ const Register: React.FC = () => {
               placeholder="your@email.com"
               style={{
                 ...styles.input,
-                ...(focusedField === 'email' && styles.inputFocused)
-              }}
+                ...(focusedField === 'email' ? styles.inputFocused : {}),
+                ...(hasFieldError && error.toLowerCase().includes('email') ? styles.inputError : {})
+              } as React.CSSProperties}
               required
               disabled={loading}
+              autoComplete="email"
             />
           </div>
 
@@ -237,10 +300,12 @@ const Register: React.FC = () => {
               placeholder="Минимум 6 символов"
               style={{
                 ...styles.input,
-                ...(focusedField === 'password' && styles.inputFocused)
-              }}
+                ...(focusedField === 'password' ? styles.inputFocused : {}),
+                ...(hasFieldError && error.toLowerCase().includes('password') ? styles.inputError : {})
+              } as React.CSSProperties}
               required
               disabled={loading}
+              autoComplete="new-password"
             />
           </div>
 
@@ -256,16 +321,28 @@ const Register: React.FC = () => {
               placeholder="Повторите пароль"
               style={{
                 ...styles.input,
-                ...(focusedField === 'confirmPassword' && styles.inputFocused)
-              }}
+                ...(focusedField === 'confirmPassword' ? styles.inputFocused : {})
+              } as React.CSSProperties}
               required
               disabled={loading}
+              autoComplete="new-password"
             />
           </div>
 
           {error && (
             <div style={styles.errorMessage}>
-              {error}
+              {error.split('\n').map((line, index) => (
+                <React.Fragment key={index}>
+                  {line}
+                  {index < error.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {successMessage && (
+            <div style={styles.successMessage}>
+              {successMessage}
             </div>
           )}
 
@@ -274,7 +351,19 @@ const Register: React.FC = () => {
             disabled={loading}
             style={{
               ...styles.submitButton,
-              ...(loading && styles.submitButtonLoading)
+              ...(loading ? styles.submitButtonLoading : {})
+            }}
+            onMouseOver={(e) => {
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-soft)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
             }}
           >
             {loading ? 'Регистрация...' : 'Зарегистрироваться'}
@@ -283,7 +372,16 @@ const Register: React.FC = () => {
 
         <div style={styles.footer}>
           <span>Уже есть аккаунт? </span>
-          <Link to="/login" style={styles.loginLink}>
+          <Link
+            to="/login"
+            style={styles.loginLink}
+            onMouseOver={(e) => {
+              e.currentTarget.style.textDecoration = 'underline';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.textDecoration = 'none';
+            }}
+          >
             Войти
           </Link>
         </div>

@@ -20,13 +20,13 @@ class LMStudioClient:
     def __init__(self, config=None):
         self.config = config or {
             'base_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234'),
-            'timeout': 20,  # Уменьшаем таймаут до 20 секунд
-            'max_tokens': 300,  # ОЧЕНЬ мало токенов для скорости
-            'temperature': 0.05,  # Минимум креативности
+            'timeout': 20,
+            'max_tokens': 300,
+            'temperature': 0.05,
             'model_name': os.getenv('LM_STUDIO_MODEL', 'qwen2.5-coder-1.5b-instruct'),
             'enable_fallback': True,
             'cache_enabled': True,
-            'max_code_length': 600  # Очень мало кода для анализа
+            'max_code_length': 600
         }
 
         self.base_url = self.config['base_url']
@@ -35,13 +35,13 @@ class LMStudioClient:
         self.last_health_check = 0
         self.health_check_interval = 30  # Проверять раз в 30 секунд
 
-        logger.info(f"🚀 Оптимизированный LM Studio клиент инициализирован")
-        logger.info(f"📡 URL: {self.base_url}")
-        logger.info(f"🤖 Модель: {self.model_name}")
-        logger.info(f"⏱️  Таймаут: {self.config['timeout']}с, Токены: {self.config['max_tokens']}")
+        logger.info(f" Оптимизированный LM Studio клиент инициализирован")
+        logger.info(f" URL: {self.base_url}")
+        logger.info(f" Модель: {self.model_name}")
+        logger.info(f"️  Таймаут: {self.config['timeout']}с, Токены: {self.config['max_tokens']}")
 
     def is_ready(self) -> bool:
-        """СУПЕР БЫСТРАЯ проверка доступности"""
+        """проверка доступности"""
         current_time = time.time()
 
         # Кэшируем результат проверки здоровья
@@ -49,7 +49,6 @@ class LMStudioClient:
             return True  # Предполагаем, что всё ещё работает
 
         try:
-            # ОЧЕНЬ быстрая проверка (1 секунда максимум)
             response = requests.get(
                 f"{self.base_url}/v1/models",
                 timeout=1.5
@@ -64,9 +63,7 @@ class LMStudioClient:
         return False
 
     def generate_documentation(self, code: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        СВЕРХБЫСТРАЯ генерация документации с таймаутом
-        """
+        """генерация документации с таймаутом"""
         start_time = time.time()
         file_path = context.get("file_path", "unknown.py")
         language = context.get("language", "python")
@@ -74,10 +71,10 @@ class LMStudioClient:
         # Кэширование для одинаковых запросов
         cache_key = f"{file_path}:{hash(code[:500])}"
         if self.config['cache_enabled'] and cache_key in self.cache:
-            logger.debug(f"🔄 Используем кэш для {file_path}")
+            logger.debug(f"Используем кэш для {file_path}")
             return self.cache[cache_key]
 
-        logger.info(f"⚡ Быстрая генерация для {file_path}")
+        logger.info(f" Быстрая генерация для {file_path}")
 
         # Используем ThreadPoolExecutor для таймаута
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -94,15 +91,15 @@ class LMStudioClient:
                     self.cache[cache_key] = result
 
                 generation_time = time.time() - start_time
-                logger.info(f"✅ Документация сгенерирована за {generation_time:.2f}с")
+                logger.info(f" Документация сгенерирована за {generation_time:.2f}с")
 
                 return result
 
             except concurrent.futures.TimeoutError:
-                logger.warning(f"⏰ Таймаут генерации для {file_path}")
+                logger.warning(f" Таймаут генерации для {file_path}")
                 return self._generate_fallback_docs(code, file_path, start_time, "Таймаут генерации")
             except Exception as e:
-                logger.error(f"❌ Ошибка генерации: {e}")
+                logger.error(f" Ошибка генерации: {e}")
                 return self._generate_fallback_docs(code, file_path, start_time, str(e))
 
     def _generate_with_semaphore(self, code: str, file_path: str, language: str) -> Dict[str, Any]:
@@ -159,7 +156,7 @@ class LMStudioClient:
             raise
 
     def _create_ultrafast_prompt(self, code: str, file_path: str, language: str) -> str:
-        """Создает УЛЬТРАКОРОТКИЙ промпт для скорости"""
+        """Создает промпт"""
 
         # Берем СУПЕР МАЛО кода для анализа
         max_chars = self.config['max_code_length']
@@ -174,7 +171,6 @@ class LMStudioClient:
         else:
             code_preview = code
 
-        # КРАТЧАЙШИЙ промпт
         prompt = f"""Опиши кратко (2-3 предложения) что делает этот код:
 
 {code_preview}
@@ -239,7 +235,7 @@ class LMStudioClient:
 **Основные элементы:**
 {', '.join(classes[:3]) if classes else ', '.join(functions[:5])}
 
-{'⚠️ ' + error_msg if error_msg else ''}"""
+{'' + error_msg if error_msg else ''}"""
 
         return {
             "documentation": [{"content": docs}],
@@ -273,7 +269,7 @@ class Calculator:
                 "success": result.get("success", False),
                 "time": round(test_time, 2),
                 "has_content": bool(result.get("documentation", [{}])[0].get("content")),
-                "status": "✅ Отлично" if test_time < 5 else "⚠️ Медленно" if test_time < 15 else "❌ Очень медленно"
+                "status": " Отлично" if test_time < 5 else "⚠️ Медленно" if test_time < 15 else "❌ Очень медленно"
             }
 
         except Exception as e:
@@ -281,7 +277,7 @@ class Calculator:
                 "success": False,
                 "error": str(e),
                 "time": round(time.time() - start_time, 2),
-                "status": "❌ Ошибка"
+                "status": " Ошибка"
             }
 
 

@@ -1,36 +1,62 @@
-import axios from 'axios';
-import { useMemo } from 'react';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-export const useApi = () => {
-  const axiosInstance = useMemo(() => {
-    const instance = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
-      timeout: 180000, // 3 минуты для анализа
-    });
+export const AUTH_UNAUTHORIZED_EVENT = 'codedoc:auth-unauthorized';
 
-    // Добавляем токен авторизации
-    instance.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
+const configuredBaseUrl = process.env.REACT_APP_API_URL?.trim();
 
-    // Обработка ошибок
-    instance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
+const apiClient = axios.create({
+  baseURL: configuredBaseUrl || '',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-    return instance;
-  }, []);
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  return axiosInstance;
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    }
+    return Promise.reject(error);
+  }
+);
+
+const get = async <T,>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
+  return apiClient.get<T>(url, config);
 };
+
+const post = async <T,>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
+  return apiClient.post<T>(url, data, config);
+};
+
+const put = async <T,>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
+  return apiClient.put<T>(url, data, config);
+};
+
+const del = async <T,>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
+  return apiClient.delete<T>(url, config);
+};
+
+const api = {
+  get,
+  post,
+  put,
+  delete: del,
+};
+
+export const useApi = () => api;
+
+export { apiClient };
