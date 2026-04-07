@@ -1,5 +1,26 @@
 services:
-  # Бэкенд FastAPI
+  postgres:
+    image: postgres:16-alpine
+    container_name: codedoc_postgres
+    init: true
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-codedoc}
+      POSTGRES_USER: ${POSTGRES_USER:-codedoc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codedoc-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codedoc} -d ${POSTGRES_DB:-codedoc}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - codedoc_network
+
   backend:
     build:
       context: ./backend
@@ -7,9 +28,13 @@ services:
     container_name: codedoc_backend
     init: true
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
-      # Внутри compose backend должен использовать свою persistent-папку, а не локальный host path из .env
-      - DATABASE_URL=sqlite:///./data/app.db
+      - DATABASE_URL=${BACKEND_DATABASE_URL:-postgresql+psycopg://codedoc:codedoc-password@postgres:5432/codedoc}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
       - REFRESH_SECRET_KEY=${REFRESH_SECRET_KEY:-your-refresh-secret-key-here}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
@@ -38,20 +63,20 @@ services:
       - GITHUB_PREVIEW_RATE_WINDOW=${GITHUB_PREVIEW_RATE_WINDOW:-60}
     volumes:
       - ./backend:/app
-      - sqlite_data:/app/data
       - static_volume:/app/static
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
+      interval: 20s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
     networks:
       - codedoc_network
 
-  # Фронтенд React
   frontend:
     build:
       context: ./frontend
@@ -59,13 +84,16 @@ services:
     container_name: codedoc_frontend
     init: true
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL:-}
       - REACT_APP_SITE_URL=${REACT_APP_SITE_URL:-http://localhost}
     ports:
       - "3000:80"
     healthcheck:
-      test: ["CMD-SHELL", "test -f /var/run/nginx.pid || test -f /run/nginx.pid"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -73,7 +101,6 @@ services:
     networks:
       - codedoc_network
 
-  # MinIO Object Storage (S3-совместимое хранилище)
   minio:
     image: minio/minio:latest
     container_name: codedoc_minio
@@ -96,24 +123,24 @@ services:
     networks:
       - codedoc_network
 
-  # Nginx reverse proxy (опционально)
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     container_name: codedoc_nginx
     init: true
     restart: unless-stopped
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - static_volume:/static
     ports:
       - "80:80"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       frontend:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "test -f /var/run/nginx.pid || test -f /run/nginx.pid"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -123,7 +150,7 @@ services:
 
 # Тома для хранения данных
 volumes:
-  sqlite_data:
+  postgres_data:
   static_volume:
   minio_data:
 

@@ -1,5 +1,5 @@
 declare module 'react-markdown' {
-  import { ComponentType, ReactNode } from 'react';
+  import { ComponentType } from 'react';
 
   export interface ReactMarkdownProps {
     children?: string;

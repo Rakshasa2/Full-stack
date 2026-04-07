@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Select, Button, DatePicker, Pagination, Modal, Upload } from 'antd';
 import {
@@ -835,7 +835,11 @@ const Dashboard: React.FC = () => {
   const { user, loading: permissionsLoading, hasPermission, isAdmin, isOwner } = usePermissions();
 
   // Функция для добавления уведомлений
-  const addNotification = (message: string, type: Notification['type'] = 'info', duration: number = 5000) => {
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
+
+  const addNotification = useCallback((message: string, type: Notification['type'] = 'info', duration: number = 5000) => {
     const id = Date.now().toString();
     const newNotification: Notification = {
       id,
@@ -853,15 +857,10 @@ const Dashboard: React.FC = () => {
     }
 
     return id;
-  };
-
-  // Функция для удаления уведомления
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+  }, [removeNotification]);
 
   // Загрузка проектов с фильтрацией
-  const fetchProjectsWithFilters = async (params: FilterParams) => {
+  const fetchProjectsWithFilters = useCallback(async (params: FilterParams) => {
     try {
       setProjectsLoading(true);
       const queryParams = new URLSearchParams({
@@ -884,7 +883,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setProjectsLoading(false);
     }
-  };
+  }, [addNotification, api]);
 
   // Загрузка файлов проекта
   const fetchProjectFiles = async (analysisId: number) => {
@@ -987,13 +986,6 @@ const Dashboard: React.FC = () => {
     fetchProjectsWithFilters(newFilters);
   };
 
-  // Открыть модальное окно с файлами
-  const openFileManager = (project: AnalysisHistory) => {
-    setSelectedProject(project);
-    fetchProjectFiles(project.id);
-    setFileModalVisible(true);
-  };
-
   const getPreviewCacheKey = (value: string): string => value.trim().replace(/\/$/, '');
 
   useEffect(() => {
@@ -1009,7 +1001,7 @@ const Dashboard: React.FC = () => {
 
     initialProjectsLoadedRef.current = true;
     fetchProjectsWithFilters(filters);
-  }, [navigate, permissionsLoading, user]);
+  }, [fetchProjectsWithFilters, filters, navigate, permissionsLoading, user]);
 
   useEffect(() => {
     const cacheKey = getPreviewCacheKey(repoUrl);
@@ -1919,7 +1911,10 @@ const Dashboard: React.FC = () => {
       <Modal
         title={`Файлы проекта: ${selectedProject?.repo_name}`}
         open={fileModalVisible}
-        onCancel={() => setFileModalVisible(false)}
+        onCancel={() => {
+          setSelectedProject(null);
+          setFileModalVisible(false);
+        }}
         footer={null}
         width={600}
       >

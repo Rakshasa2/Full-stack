@@ -344,6 +344,7 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: str
     uptime: float
+    dependencies: Dict[str, str] = Field(default_factory=dict)
 
 
 class AdminStatsResponse(BaseModel):
@@ -438,6 +439,11 @@ class FileInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FileUploadConfirmRequest(BaseModel):
+    """Подтверждение успешной загрузки файла в объектное хранилище"""
+    file_size: int = Field(..., ge=0)
 
 Token = TokenResponse
 LoginRequest = UserLogin

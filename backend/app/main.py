@@ -41,6 +41,7 @@ from .schemas import (
     RoleSchema,
     PaginatedResponse,
     FileUploadResponse,
+    FileUploadConfirmRequest,
     FileInfo,
     AnalysisUpdate,
     RepositoryPreviewResponse,
@@ -193,13 +194,15 @@ async def startup_event():
             conn.execute(text("SELECT 1"))
         logger.info("Подключение к базе данных успешно")
 
-        db = next(get_db())
+        db_generator = get_db()
+        db = next(db_generator)
         try:
             init_roles_and_permissions(db)
             ensure_admin_exists(db)
             logger.info("Роли и разрешения инициализированы")
         finally:
             db.close()
+            db_generator.close()
 
     except Exception as e:
         logger.error(f"Ошибка при запуске: {e}")
@@ -233,12 +236,28 @@ async def root():
 async def health_check():
     current_time = time.strftime("%Y-%m-%d %H:%M:%S")
     uptime = time.time() - app_start_time
+    dependencies = {
+        "database": "unknown",
+        "s3_storage": "unknown",
+    }
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        dependencies["database"] = "available"
+    except Exception as exc:
+        logger.error(f"Проверка здоровья БД завершилась ошибкой: {exc}")
+        raise HTTPException(status_code=503, detail="База данных недоступна") from exc
+
+    dependencies["s3_storage"] = "available" if (S3_AVAILABLE or initialize_s3_client()) else "degraded"
+
     return HealthResponse(
-        status="healthy",
+        status="healthy" if dependencies["s3_storage"] == "available" else "degraded",
         service="CodeDoc AI",
         version="2.0.0",
         timestamp=current_time,
-        uptime=round(uptime, 2)
+        uptime=round(uptime, 2),
+        dependencies=dependencies,
     )
 
 
@@ -316,6 +335,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             created_at=user.created_at
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Ошибка регистрации: {e}")
@@ -407,8 +428,11 @@ async def refresh_token(
         return Token(
             access_token=new_access_token,
             refresh_token=new_refresh_token,
-            token_type="bearer"
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Ошибка обновления токена: {e}")
         raise HTTPException(
@@ -706,7 +730,7 @@ async def get_analyses(
         has_prev=page > 1
     )
 
-# НОВЫЙ ЭНДПОИНТ ДЛЯ СОВМЕСТИМОСТИ
+
 @app.get("/api/analyses/history")
 async def get_analyses_history_compat(
         skip: int = Query(0, ge=0, description="Количество пропускаемых записей"),
@@ -937,7 +961,7 @@ async def get_file_upload_url(
 @app.post("/api/files/{file_id}/confirm")
 async def confirm_file_upload(
         file_id: str,
-        file_size: int,
+        upload_data: FileUploadConfirmRequest,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db)
 ):
@@ -952,7 +976,7 @@ async def confirm_file_upload(
             detail="Файл не найден"
         )
 
-    db_file.file_size = file_size
+    db_file.file_size = upload_data.file_size
     db.commit()
 
     return {"message": "Файл успешно загружен", "file_id": file_id}
@@ -1436,10 +1460,12 @@ async def get_admin_stats(
 
 @app.exception_handler(404)
 async def not_found_exception_handler(request, exc):
+    detail = getattr(exc, "detail", None) or "Ресурс не найден"
+
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={
-            "detail": "Ресурс не найден",
+            "detail": detail,
             "path": request.url.path,
             "available_endpoints": {
                 "documentation": "/api/docs",
